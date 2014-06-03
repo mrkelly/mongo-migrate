@@ -7,6 +7,8 @@ var args = process.argv.slice(2);
  * Module dependencies.
  */
 var migrate = require('./lib/migrate'),
+	gofigure = require('gofigure'),
+	_ = require('lodash'),
 	path = require('path'),
 	join = path.join,
 	fs = require('fs');
@@ -38,7 +40,7 @@ var usage = [
 	, '     -runmm, --runMongoMigrate   Run the migration from the command line',
 	, '     -c, --chdir <path>    		change the working directory'
 	, '     -cfg, --config <path> 		DB config file name'
-	, '     -dbn, --dbPropName <string> Property name for database connection in config file'
+	, '     -configpath, --configpath <string> Property path for database connection uri in config file'
 	, ''
 	, '  Commands:'
 	, ''
@@ -242,8 +244,18 @@ function runMongoMigrate(direction, migrationEnd) {
 	 * @param {String} direction
 	 */
 	function performMigration(direction, migrateTo) {
-		var db = require('./lib/db');
-		db.getConnection(dbConfig || require(path.relative(__dirname, previousWorkingDirectory) + path.sep + cwd + path.sep + configFileName)[dbProperty], function (err, db) {
+		var db = require('./lib/db'),
+			config = gofigure({
+				locations: [configFileName],
+				environment: process.env.NODE_ENV
+			}).loadSync(),
+			uri = config;
+		
+		_.each(dbProperty.split('.'), function(component) {
+			uri = uri[component];
+		});
+				
+		db.getConnection({uri: uri}, function (err, db) {
 			if (err) {
 				console.error('Error connecting to database');
 				process.exit(1);
@@ -340,8 +352,8 @@ if (runmmIdx > -1 || runMongoMigrateIdx > -1) {
 			case '--config':
 				setConfigFilename(required());
 				break;
-			case '-dbn':
-			case '--dbPropName':
+			case '-configpath':
+			case '--configpath':
 				setConfigFileProperty(required());
 				break;
 			default:
