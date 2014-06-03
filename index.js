@@ -136,7 +136,7 @@ function runMongoMigrate(direction, migrationEnd) {
 					isRunnable = formatCorrect && isDirectionUp ? migrationNum > lastMigrationNum : migrationNum <= lastMigrationNum;
 
 				if (!formatCorrect) {
-					console.log('"' + file + '" ignored. Does not match migration naming schema');
+					//console.log('"' + file + '" ignored. Does not match migration naming schema');
 				}
 
 				return formatCorrect && isRunnable;
@@ -243,7 +243,7 @@ function runMongoMigrate(direction, migrationEnd) {
 	 */
 	function performMigration(direction, migrateTo) {
 		var db = require('./lib/db');
-		db.getConnection(dbConfig || require(cwd + path.sep + configFileName)[dbProperty], function (err, db) {
+		db.getConnection(dbConfig || require(path.relative(__dirname, previousWorkingDirectory) + path.sep + cwd + path.sep + configFileName)[dbProperty], function (err, db) {
 			if (err) {
 				console.error('Error connecting to database');
 				process.exit(1);
@@ -265,11 +265,11 @@ function runMongoMigrate(direction, migrationEnd) {
 					db: dbConnection,
 					migrationCollection: migrationCollection
 				});
-				migrations(direction, lastMigrationNum, migrateTo).forEach(function(path){
-					var mod = require(cwd + '/' + path);
+				migrations(direction, lastMigrationNum, migrateTo).forEach(function(filePath){					
+					var mod = require(path.relative(__dirname, previousWorkingDirectory) + path.sep + cwd + path.sep + filePath);
 					migrate({
-						num: parseInt(path.split('/')[1].match(/^(\d+)/)[0], 10),
-						title: path,
+						num: parseInt(filePath.split('/')[1].match(/^(\d+)/)[0], 10),
+						title: filePath,
 						up: mod.up,
 						down: mod.down});
 				});
